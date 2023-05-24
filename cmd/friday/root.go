@@ -77,7 +77,7 @@ var rootCmd = &cobra.Command{
 	Short: "Get SQL query in everyday language",
 	Long: "This is Long Description",
 	Run: func(cmd *cobra.Command, args []string){
-		// fmt.Printf("Running a execute function")
+
 		p := tea.NewProgram(initialModel())
 		if _, err := p.Run(); err != nil {
 			// log.Fatal(err)
