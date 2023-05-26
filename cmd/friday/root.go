@@ -3,10 +3,14 @@ package friday
 import (
 	"fmt"
 	"os"
-	"github.com/spf13/cobra"
+	"strings"
+
+	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -23,20 +27,38 @@ type (
 )
 
 type model struct {
-	textInput textinput.Model
-	err       error
+	viewport    viewport.Model
+	messages    []string
+	textarea    textarea.Model
+	senderStyle lipgloss.Style
+	err         error
 }
 
 func initialModel() model {
-	ti := textinput.New()
-	ti.Placeholder = "What do you wanna know about your data?"
+	ti := textarea.New()
+	ti.Placeholder = "write a query ..."
 	ti.Focus()
-	ti.CharLimit = 156
-	ti.Width = 20
+
+	ti.Prompt = "┃ "
+	ti.CharLimit = 280
+
+	ti.SetWidth(50)
+	ti.SetHeight(1)
+
+	// Remove cursor line styling
+	ti.FocusedStyle.CursorLine = lipgloss.NewStyle()
+
+	ti.ShowLineNumbers = false
+
+	vp := viewport.New(50, 5)
+	ti.KeyMap.InsertNewline.SetEnabled(false)
 
 	return model{
-		textInput: ti,
-		err:       nil,
+		textarea:    ti,
+		messages:    []string{},
+		viewport:    vp,
+		senderStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("5")),
+		err:         nil,
 	}
 }
 
@@ -45,13 +67,25 @@ func (m model) Init() tea.Cmd {
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
+	var (
+		tiCmd tea.Cmd
+		vpCmd tea.Cmd
+	)
+
+	m.textarea, tiCmd = m.textarea.Update(msg)
+	m.viewport, vpCmd = m.viewport.Update(msg)
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Type {
-		case tea.KeyEnter, tea.KeyCtrlC, tea.KeyEsc:
+		case tea.KeyCtrlC, tea.KeyEsc:
+			fmt.Println(m.textarea.Value())
 			return m, tea.Quit
+		case tea.KeyEnter:
+			m.messages = append(m.messages, m.senderStyle.Render("You: ")+m.textarea.Value())
+			m.viewport.SetContent(strings.Join(m.messages, "\n"))
+			m.textarea.Reset()
+			m.viewport.GotoBottom()
 		}
 
 	// We handle errors just like any other message
@@ -60,23 +94,34 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	m.textInput, cmd = m.textInput.Update(msg)
-	return m, cmd
+	return m, tea.Batch(tiCmd, vpCmd)
 }
 
 func (m model) View() string {
-	return fmt.Sprintf(
-		inputStyle.Width(30).Render("You: "),
-		m.textInput.View(),
-		// "(esc to quit)",
+	// if m.width == 0 || m.height == 0 {
+	// 	return "Initializing..."
+	// }
+
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		m.viewport.View(),
+		m.textarea.View(),
+		// m.RenderFooter(),
 	)
+	// return fmt.Sprintf(
+	// 	// inputStyle.Width(30).Render("You: "),
+	// 	"%s\n\n%s",
+	// 	m.viewport.View(),
+	// 	m.textarea.View(),
+	// 	// "(esc to quit)",
+	// )
 }
 
 var rootCmd = &cobra.Command{
-	Use: "Friday",
+	Use:   "Friday",
 	Short: "Get SQL query in everyday language",
-	Long: "This is Long Description",
-	Run: func(cmd *cobra.Command, args []string){
+	Long:  "This is Long Description",
+	Run: func(cmd *cobra.Command, args []string) {
 
 		p := tea.NewProgram(initialModel())
 		if _, err := p.Run(); err != nil {
