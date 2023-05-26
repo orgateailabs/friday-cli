@@ -103,7 +103,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			fmt.Println(m.textarea.Value())
 			return m, tea.Quit
 		case tea.KeyEnter:
+			input := strings.TrimSpace(m.textarea.Value())
+
+			if input == "" {
+				break
+			}
+
 			m.messages = append(m.messages, m.senderStyle.Render("You: ")+m.textarea.Value())
+			m.messages = append(m.messages, m.senderStyle.Render("Friday: ")+m.textarea.Value())
 			m.viewport.SetContent(strings.Join(m.messages, "\n"))
 			m.textarea.Reset()
 			m.viewport.GotoBottom()
@@ -119,26 +126,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) RenderFooter() string {
-	// if m.err != nil {
-	// 	return footerStyle.Render(errorStyle.Render(fmt.Sprintf("error: %v", m.err)))
-	// }
-
-	// spinner
 	var columns []string
 
 	// help
 	columns = append(columns, fmt.Sprintf("%s ctrl+h"))
 
-	// prompt
-	// prompt := m.conversations.Curr().Config.Prompt
-	// prompt = fmt.Sprintf("%s %s", PromptIcon, prompt)
-	// columns = append(columns, prompt)
-
 	totalWidth := lipgloss.Width(strings.Join(columns, ""))
-	// padding := (m.width - totalWidth) / (len(columns) - 1)
-	// if padding < 0 {
-	// 	padding = 2
-	// }
 	padding := 2
 
 	if totalWidth+(len(columns)-1)*padding > m.width {
@@ -148,9 +141,6 @@ func (m model) RenderFooter() string {
 
 	footer := strings.Join(columns, strings.Repeat(" ", padding))
 	footer = footerStyle.Render(footer)
-	// if m.help.ShowAll {
-	// 	return "\n" + m.help.View(m.keymap) + "\n" + footer
-	// }
 	return footer
 }
 
