@@ -93,11 +93,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		// m.help.Width = msg.Width
 		m.viewport.Width = msg.Width
 		m.viewport.Height = msg.Height - m.textarea.Height() - lipgloss.Height(m.RenderFooter())
 		m.textarea.SetWidth(msg.Width)
-		// m.viewport.SetContent(m.RenderConversation(m.viewport.Width))
 		m.viewport.GotoBottom()
 	case tea.KeyMsg:
 		switch msg.Type {
