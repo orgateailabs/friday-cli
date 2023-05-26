@@ -22,6 +22,18 @@ var (
 	inputStyle = lipgloss.NewStyle().Foreground(hotPink)
 )
 
+var (
+	senderStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("5"))
+	// botStyle    = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("6"))
+	// errorStyle  = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("1"))
+	footerStyle = lipgloss.NewStyle().
+			Height(1).
+			BorderTop(true).
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(lipgloss.Color("8")).
+			Faint(true)
+)
+
 type (
 	errMsg error
 )
@@ -31,6 +43,8 @@ type model struct {
 	messages    []string
 	textarea    textarea.Model
 	senderStyle lipgloss.Style
+	width       int
+	height      int
 	err         error
 }
 
@@ -76,6 +90,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.viewport, vpCmd = m.viewport.Update(msg)
 
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		// m.help.Width = msg.Width
+		m.viewport.Width = msg.Width
+		m.viewport.Height = msg.Height - m.textarea.Height() - lipgloss.Height(m.RenderFooter())
+		m.textarea.SetWidth(msg.Width)
+		// m.viewport.SetContent(m.RenderConversation(m.viewport.Width))
+		m.viewport.GotoBottom()
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyCtrlC, tea.KeyEsc:
@@ -97,24 +120,49 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(tiCmd, vpCmd)
 }
 
-func (m model) View() string {
-	// if m.width == 0 || m.height == 0 {
-	// 	return "Initializing..."
+func (m model) RenderFooter() string {
+	// if m.err != nil {
+	// 	return footerStyle.Render(errorStyle.Render(fmt.Sprintf("error: %v", m.err)))
 	// }
 
+	// spinner
+	var columns []string
+
+	// help
+	columns = append(columns, fmt.Sprintf("%s ctrl+h"))
+
+	// prompt
+	// prompt := m.conversations.Curr().Config.Prompt
+	// prompt = fmt.Sprintf("%s %s", PromptIcon, prompt)
+	// columns = append(columns, prompt)
+
+	totalWidth := lipgloss.Width(strings.Join(columns, ""))
+	// padding := (m.width - totalWidth) / (len(columns) - 1)
+	// if padding < 0 {
+	// 	padding = 2
+	// }
+	padding := 2
+
+	if totalWidth+(len(columns)-1)*padding > m.width {
+		remainingSpace := 5
+		columns[len(columns)-1] = columns[len(columns)-1][:remainingSpace] + "..."
+	}
+
+	footer := strings.Join(columns, strings.Repeat(" ", padding))
+	footer = footerStyle.Render(footer)
+	// if m.help.ShowAll {
+	// 	return "\n" + m.help.View(m.keymap) + "\n" + footer
+	// }
+	return footer
+}
+
+func (m model) View() string {
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
 		m.viewport.View(),
 		m.textarea.View(),
-		// m.RenderFooter(),
+		m.RenderFooter(),
 	)
-	// return fmt.Sprintf(
-	// 	// inputStyle.Width(30).Render("You: "),
-	// 	"%s\n\n%s",
-	// 	m.viewport.View(),
-	// 	m.textarea.View(),
-	// 	// "(esc to quit)",
-	// )
 }
 
 var rootCmd = &cobra.Command{
