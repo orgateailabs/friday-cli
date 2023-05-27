@@ -108,12 +108,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if input == "" {
 				break
 			}
-
 			m.messages = append(m.messages, m.senderStyle.Render("You: ")+m.textarea.Value())
 			m.messages = append(m.messages, m.senderStyle.Render("Friday: ")+m.textarea.Value())
 			m.viewport.SetContent(strings.Join(m.messages, "\n"))
 			m.textarea.Reset()
 			m.viewport.GotoBottom()
+			resp := orgateai.main()
+			fmt.Println(resp)
 		}
 
 	// We handle errors just like any other message
@@ -128,7 +129,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m model) RenderFooter() string {
 	var columns []string
 
-	// help
 	columns = append(columns, fmt.Sprintf("%s ctrl+h"))
 
 	totalWidth := lipgloss.Width(strings.Join(columns, ""))
@@ -161,7 +161,6 @@ var rootCmd = &cobra.Command{
 
 		p := tea.NewProgram(initialModel())
 		if _, err := p.Run(); err != nil {
-			// log.Fatal(err)
 			fmt.Printf("something is wrong")
 		}
 

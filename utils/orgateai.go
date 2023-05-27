@@ -26,8 +26,7 @@ func main(query string, apiKey string) []byte {
 	reqBody := formPostCallBody(query, apiKey)
 	body, err := json.Marshal(reqBody)
 	if err != nil {
-		fmt.Println(err)
-		return
+		panic(err)
 	}
 
 	fmt.Println(body)
