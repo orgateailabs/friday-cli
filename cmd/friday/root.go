@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Orgate-AI/friday-cli/utils"
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -109,12 +110,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				break
 			}
 			m.messages = append(m.messages, m.senderStyle.Render("You: ")+m.textarea.Value())
-			m.messages = append(m.messages, m.senderStyle.Render("Friday: ")+m.textarea.Value())
+			resp := utils.RunQuery(input, "somehign")
+			m.messages = append(m.messages, m.senderStyle.Render("Friday: ")+string(resp))
 			m.viewport.SetContent(strings.Join(m.messages, "\n"))
 			m.textarea.Reset()
 			m.viewport.GotoBottom()
-			resp := orgateai.main()
-			fmt.Println(resp)
 		}
 
 	// We handle errors just like any other message

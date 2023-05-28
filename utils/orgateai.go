@@ -22,7 +22,7 @@ func formPostCallBody(query string, apiKey string) postBody {
 	return body
 }
 
-func main(query string, apiKey string) []byte {
+func RunQuery(query string, apiKey string) []byte {
 	reqBody := formPostCallBody(query, apiKey)
 	body, err := json.Marshal(reqBody)
 	if err != nil {
