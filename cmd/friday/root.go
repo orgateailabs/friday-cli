@@ -14,6 +14,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	apiKey         = os.Getenv("ORGATEAI_API_KEY")
+	schemaFilePath = os.Getenv("DB_SCHEMA_FILE_PATH")
+)
+
 const (
 	hotPink  = lipgloss.Color("#FF06B7")
 	darkGray = lipgloss.Color("#767676")
@@ -77,6 +82,21 @@ func initialModel() model {
 	}
 }
 
+// take the JSON file and form a string
+func getDBSchema(schemaFilePath string) string {
+	finalSchema := ""
+	contents, err := os.ReadFile(schemaFilePath)
+	if err != nil {
+		fmt.Println("File reading error:", err)
+		return "File reading error. Check log."
+	}
+	// schema := string(contents)
+	fmt.Println(contents)
+
+	return finalSchema
+
+}
+
 func (m model) Init() tea.Cmd {
 	return textinput.Blink
 }
@@ -104,13 +124,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			fmt.Println(m.textarea.Value())
 			return m, tea.Quit
 		case tea.KeyEnter:
-			input := strings.TrimSpace(m.textarea.Value())
-
-			if input == "" {
+			query := strings.TrimSpace(m.textarea.Value())
+			// dbSchema := getDBSchema(schemaFilePath)
+			dbSchema := "Employee(id, name, department_id)\n# Department(id, name, address)\n# Salary_Payments(id, employee_id, amount, date)"
+			apiKey := "orai-e423b59f-e915-41d8-a173-6411ea9b4c88"
+			if query == "" {
 				break
 			}
 			m.messages = append(m.messages, m.senderStyle.Render("You: ")+m.textarea.Value())
-			resp := utils.RunQuery(input, "somehign")
+			resp := utils.RunQuery(query, apiKey, dbSchema)
 			m.messages = append(m.messages, m.senderStyle.Render("Friday: ")+string(resp))
 			m.viewport.SetContent(strings.Join(m.messages, "\n"))
 			m.textarea.Reset()

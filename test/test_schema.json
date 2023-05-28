@@ -1,0 +1,5 @@
+{
+  "employees": ["id", "name", "department_id"],
+  "department": ["id", "name", "address"],
+  "salary_payments": ["id", "employee_id", "amount", "date"]
+}
