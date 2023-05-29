@@ -26,12 +26,8 @@ const (
 )
 
 var (
-	inputStyle = lipgloss.NewStyle().Foreground(hotPink)
-)
-
-var (
 	senderStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("5"))
-	// botStyle    = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("6"))
+	botStyle    = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("6"))
 	// errorStyle  = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("1"))
 	footerStyle = lipgloss.NewStyle().
 			Height(1).
@@ -53,7 +49,6 @@ type model struct {
 	width       int
 	height      int
 	err         error
-	renderer    *glamour.TermRenderer
 }
 
 func initialModel() model {
@@ -121,15 +116,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.textarea.SetWidth(msg.Width)
 		m.viewport.GotoBottom()
 	case tea.KeyMsg:
+		footerStyle = lipgloss.NewStyle().
+			Height(1).
+			BorderTop(true).
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(lipgloss.Color("8")).
+			Faint(true)
 		switch msg.Type {
 		case tea.KeyCtrlC, tea.KeyEsc:
 			fmt.Println(m.textarea.Value())
 			return m, tea.Quit
 		case tea.KeyEnter:
 			query := strings.TrimSpace(m.textarea.Value())
-			// dbSchema := getDBSchema(schemaFilePath)
-
-			// m.messages = append(m.messages, m.senderStyle.Render("You: ")+m.textarea.Value())
 			m.messages = append(m.messages, query)
 			m.viewport.SetContent(m.RenderConversation(m.viewport.Width))
 			m.textarea.Reset()
@@ -166,7 +164,7 @@ func (m model) RenderConversation(maxWidth int) string {
 		if content == "" {
 			return
 		}
-		sb.WriteString(senderStyle.Render("ChatGPT: "))
+		sb.WriteString(botStyle.Render("Friday: "))
 		content, _ = glamour.Render(content, "dark")
 		sb.WriteString(content)
 	}
@@ -183,7 +181,7 @@ func (m model) RenderConversation(maxWidth int) string {
 func (m model) RenderFooter() string {
 	var columns []string
 
-	columns = append(columns, fmt.Sprintf("%s ctrl+h"))
+	columns = append(columns, fmt.Sprintf("%s To quit:", "ctrl + c"))
 
 	totalWidth := lipgloss.Width(strings.Join(columns, ""))
 	padding := 2
