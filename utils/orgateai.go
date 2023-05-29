@@ -3,52 +3,50 @@ package utils
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 )
 
-const url = "https://orgateai.ue.r.appspot.com/query"
+const queryUrl = "https://orgateai.ue.r.appspot.com/query"
 
-type postBody struct {
-	query     string
-	api_key   string
-	db_schema string
+type resBody struct {
+	Data   string `json:"data"`
+	Status string `json:"status"`
 }
 
 // API key is working as auth bearer.
 // TODO: Should not pass API key everytime
-func formPostCallBody(query string, apiKey string, dbSchema string) postBody {
-	body := postBody{query: query, api_key: apiKey, db_schema: dbSchema}
-	return body
-}
+// func formPostCallBody(query string, apiKey string, dbSchema string) postBody {
+// 	body := postBody{query: query, api_key: apiKey, db_schema: dbSchema}
+// 	return body
+// }
 
-func RunQuery(query string, apiKey string, dbSchema string) []byte {
-	reqBody := formPostCallBody(query, apiKey, dbSchema)
-	body, err := json.Marshal(reqBody)
+func RunQuery(query string, apiKey string, dbSchema string) string {
+	reqBody, err := json.Marshal(map[string]string{
+		"api_key":   apiKey,
+		"db_schema": dbSchema,
+		"query":     query,
+	})
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println(body)
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
+	// fmt.Println(body)
+	resp, err := http.Post(queryUrl, "application/json", bytes.NewBuffer(reqBody))
 	if err != nil {
 		panic(err)
 	}
-
-	req.Header.Add("Accept", "application/json")
-	// req.Header.Add("User-Agent", "")
-	resp, err := http.DefaultClient.Do(req)
-
-	if err != nil {
-		panic(err)
-	}
+	defer resp.Body.Close()
 
 	respBytes, err := ioutil.ReadAll(resp.Body)
-
+	// resString := string(respBytes)
+	// fmt.Println(resString)
+	respBody := resBody{}
+	err = json.Unmarshal(respBytes, &respBody)
 	if err != nil {
 		panic(err)
 	}
-
-	return respBytes
+	// fmt.Println("Query: ", respBody.Data)
+	// fmt.Println("Status: ", respBody.Status)
+	return respBody.Data
 }
