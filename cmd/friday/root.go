@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 )
@@ -52,6 +53,7 @@ type model struct {
 	width       int
 	height      int
 	err         error
+	renderer    *glamour.TermRenderer
 }
 
 func initialModel() model {
@@ -83,19 +85,19 @@ func initialModel() model {
 }
 
 // take the JSON file and form a string
-func getDBSchema(schemaFilePath string) string {
-	finalSchema := ""
-	contents, err := os.ReadFile(schemaFilePath)
-	if err != nil {
-		fmt.Println("File reading error:", err)
-		return "File reading error. Check log."
-	}
-	// schema := string(contents)
-	fmt.Println(contents)
+// func getDBSchema(schemaFilePath string) string {
+// 	finalSchema := ""
+// 	contents, err := os.ReadFile(schemaFilePath)
+// 	if err != nil {
+// 		fmt.Println("File reading error:", err)
+// 		return "File reading error. Check log."
+// 	}
+// 	// schema := string(contents)
+// 	fmt.Println(contents)
 
-	return finalSchema
+// 	return finalSchema
 
-}
+// }
 
 func (m model) Init() tea.Cmd {
 	return textinput.Blink
@@ -126,16 +128,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyEnter:
 			query := strings.TrimSpace(m.textarea.Value())
 			// dbSchema := getDBSchema(schemaFilePath)
-			dbSchema := "Employee(id, name, department_id)\n# Department(id, name, address)\n# Salary_Payments(id, employee_id, amount, date)"
-			apiKey := "orai-e423b59f-e915-41d8-a173-6411ea9b4c88"
-			if query == "" {
-				break
-			}
-			m.messages = append(m.messages, m.senderStyle.Render("You: ")+m.textarea.Value())
-			resp := utils.RunQuery(query, apiKey, dbSchema)
-			m.messages = append(m.messages, m.senderStyle.Render("Friday: ")+string(resp))
-			m.viewport.SetContent(strings.Join(m.messages, "\n"))
+
+			// m.messages = append(m.messages, m.senderStyle.Render("You: ")+m.textarea.Value())
+			m.messages = append(m.messages, query)
+			m.viewport.SetContent(m.RenderConversation(m.viewport.Width))
 			m.textarea.Reset()
+			m.textarea.Blur()
 			m.viewport.GotoBottom()
 		}
 
@@ -146,6 +144,40 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, tea.Batch(tiCmd, vpCmd)
+}
+
+func (m model) RenderConversation(maxWidth int) string {
+	var sb strings.Builder
+
+	dbSchema := "Employee(id, name, department_id)\n# Department(id, name, address)\n# Salary_Payments(id, employee_id, amount, date)"
+	apiKey := "orai-e423b59f-e915-41d8-a173-6411ea9b4c88"
+	query := m.messages[0]
+
+	if query == "" {
+		return ""
+	}
+
+	renderYou := func(content string) {
+		sb.WriteString(senderStyle.Render("You: "))
+		content, _ = glamour.Render(content, "dark")
+		sb.WriteString(content)
+	}
+	renderBot := func(content string) {
+		if content == "" {
+			return
+		}
+		sb.WriteString(senderStyle.Render("ChatGPT: "))
+		content, _ = glamour.Render(content, "dark")
+		sb.WriteString(content)
+	}
+	renderYou(query)
+	resp, err := utils.RunQuery(query, apiKey, dbSchema)
+	if err != nil {
+		fmt.Println(err)
+	}
+	renderBot(resp)
+
+	return sb.String()
 }
 
 func (m model) RenderFooter() string {
@@ -191,7 +223,7 @@ var rootCmd = &cobra.Command{
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Printf("Something is wrong!!", err)
+		fmt.Println("Something is wrong!!", err)
 		os.Exit(1)
 	}
 }
