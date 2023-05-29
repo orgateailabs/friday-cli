@@ -181,7 +181,7 @@ func (m model) RenderConversation(maxWidth int) string {
 func (m model) RenderFooter() string {
 	var columns []string
 
-	columns = append(columns, fmt.Sprintf("%s To quit:", "ctrl + c"))
+	columns = append(columns, fmt.Sprintf("To quit: %s", "ctrl + c"))
 
 	totalWidth := lipgloss.Width(strings.Join(columns, ""))
 	padding := 2
