@@ -41,6 +41,7 @@ var (
 
 type (
 	errMsg error
+	ansMsg string
 )
 
 type model struct {
@@ -49,6 +50,7 @@ type model struct {
 	textarea    textarea.Model
 	senderStyle lipgloss.Style
 	spinner     spinner.Model
+	answering   bool
 	width       int
 	height      int
 	err         error
@@ -71,7 +73,10 @@ func initialModel() model {
 	ti.ShowLineNumbers = false
 
 	vp := viewport.New(50, 5)
-	spin := spinner.New(spinner.WithSpinner(spinner.Points))
+	// TODO: diff design for spinner
+	spin := spinner.New()
+	spin.Spinner = spinner.Dot
+	spin.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 	ti.KeyMap.InsertNewline.SetEnabled(false)
 
 	return model{
@@ -105,12 +110,14 @@ func (m model) Init() tea.Cmd {
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var (
-		tiCmd tea.Cmd
-		vpCmd tea.Cmd
+		cmd  tea.Cmd
+		cmds []tea.Cmd
 	)
 
-	m.textarea, tiCmd = m.textarea.Update(msg)
-	m.viewport, vpCmd = m.viewport.Update(msg)
+	m.textarea, cmd = m.textarea.Update(msg)
+	cmds = append(cmds, cmd)
+	m.viewport, cmd = m.viewport.Update(msg)
+	cmds = append(cmds, cmd)
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -120,6 +127,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewport.Height = msg.Height - m.textarea.Height() - lipgloss.Height(m.RenderFooter())
 		m.textarea.SetWidth(msg.Width)
 		m.viewport.GotoBottom()
+	case spinner.TickMsg:
+		if m.answering {
+			m.spinner, cmd = m.spinner.Update(msg)
+			cmds = append(cmds, cmd)
+		}
+
 	case tea.KeyMsg:
 		footerStyle = lipgloss.NewStyle().
 			Height(1).
@@ -132,7 +145,28 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			fmt.Println(m.textarea.Value())
 			return m, tea.Quit
 		case tea.KeyEnter:
+			dbSchema := "Employee(id, name, department_id)\n# Department(id, name, address)\n# Salary_Payments(id, employee_id, amount, date)"
+			apiKey := "orai-e423b59f-e915-41d8-a173-6411ea9b4c88"
+			if m.answering {
+				break
+			}
 			query := strings.TrimSpace(m.textarea.Value())
+			cmds = append(cmds,
+				func() tea.Msg {
+					content, err := utils.RunQuery(query, apiKey, dbSchema)
+					if err != nil {
+						return errMsg(err)
+					}
+					return ansMsg(content)
+				},
+			)
+			m.answering = true
+			cmds = append(cmds,
+				func() tea.Msg {
+					return m.spinner.Tick()
+				},
+			)
+			// fmt.Println(cmds)
 			m.messages = append(m.messages, query)
 			m.viewport.SetContent(m.RenderConversation(m.viewport.Width))
 			m.textarea.Reset()
@@ -146,14 +180,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	return m, tea.Batch(tiCmd, vpCmd)
+	return m, tea.Batch(cmds...)
 }
 
 func (m model) RenderConversation(maxWidth int) string {
 	var sb strings.Builder
 
-	dbSchema := "Employee(id, name, department_id)\n# Department(id, name, address)\n# Salary_Payments(id, employee_id, amount, date)"
-	apiKey := "orai-e423b59f-e915-41d8-a173-6411ea9b4c88"
 	query := m.messages[0]
 
 	if query == "" {
@@ -174,11 +206,7 @@ func (m model) RenderConversation(maxWidth int) string {
 		sb.WriteString(content)
 	}
 	renderYou(query)
-	sqlQuery, err := utils.RunQuery(query, apiKey, dbSchema)
-	if err != nil {
-		fmt.Println(err)
-	}
-	renderBot(sqlQuery)
+	renderBot("anser")
 
 	return sb.String()
 }
@@ -207,6 +235,7 @@ func (m model) View() string {
 		m.viewport.View(),
 		m.textarea.View(),
 		m.RenderFooter(),
+		m.spinner.View(),
 	)
 }
 
