@@ -166,7 +166,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m.spinner.Tick()
 				},
 			)
-			// fmt.Println(cmds)
 			m.messages = append(m.messages, query)
 			m.viewport.SetContent(m.RenderConversation(m.viewport.Width))
 			m.textarea.Reset()
@@ -177,6 +176,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// We handle errors just like any other message
 	case errMsg:
 		m.err = msg
+		return m, nil
+
+	case ansMsg:
+		fmt.Println(string(msg))
 		return m, nil
 	}
 
