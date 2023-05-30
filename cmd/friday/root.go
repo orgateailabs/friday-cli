@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/Orgate-AI/friday-cli/utils"
+
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -46,6 +48,7 @@ type model struct {
 	messages    []string
 	textarea    textarea.Model
 	senderStyle lipgloss.Style
+	spinner     spinner.Model
 	width       int
 	height      int
 	err         error
@@ -68,6 +71,7 @@ func initialModel() model {
 	ti.ShowLineNumbers = false
 
 	vp := viewport.New(50, 5)
+	spin := spinner.New(spinner.WithSpinner(spinner.Points))
 	ti.KeyMap.InsertNewline.SetEnabled(false)
 
 	return model{
@@ -75,6 +79,7 @@ func initialModel() model {
 		messages:    []string{},
 		viewport:    vp,
 		senderStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("5")),
+		spinner:     spin,
 		err:         nil,
 	}
 }
@@ -169,11 +174,11 @@ func (m model) RenderConversation(maxWidth int) string {
 		sb.WriteString(content)
 	}
 	renderYou(query)
-	resp, err := utils.RunQuery(query, apiKey, dbSchema)
+	sqlQuery, err := utils.RunQuery(query, apiKey, dbSchema)
 	if err != nil {
 		fmt.Println(err)
 	}
-	renderBot(resp)
+	renderBot(sqlQuery)
 
 	return sb.String()
 }
